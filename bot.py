@@ -211,33 +211,63 @@ async def loja_criar(ctx):
     if not is_staff(ctx.author): return
     def check(m): return m.author == ctx.author and m.channel == ctx.channel
 
-    await ctx.send("Nome do produto:")
+    # limpa conversa anterior
+    try:
+        await ctx.channel.purge(limit=20)
+    except:
+        pass
+
+    await ctx.send("🛍️ **Criando novo produto**\nDigite o **nome do produto**:")
     nome = (await bot.wait_for("message", check=check)).content
 
-    await ctx.send("Chave PIX:")
+    await ctx.send("Digite a **descrição do produto**:")
+    descricao = (await bot.wait_for("message", check=check)).content
+
+    await ctx.send("Envie a **imagem do produto** (ou um link):")
+    msg_img = await bot.wait_for("message", check=check)
+    if msg_img.attachments:
+        imagem = msg_img.attachments[0].url
+    else:
+        imagem = msg_img.content
+
+    await ctx.send("Digite a **chave PIX**:")
     pix = (await bot.wait_for("message", check=check)).content
 
     plans = {}
     i = 1
     while True:
-        await ctx.send(f"Plano {i} nome:")
+        await ctx.send(f"📦 **Plano {i}**\nNome:")
         pname = (await bot.wait_for("message", check=check)).content
+
         await ctx.send("Preço:")
         pprice = int((await bot.wait_for("message", check=check)).content)
+
         await ctx.send("Estoque:")
         pstock = int((await bot.wait_for("message", check=check)).content)
+
         plans[f"p{i}"] = {"name": pname, "price": pprice, "stock": pstock}
-        await ctx.send("Outro plano? (s/n)")
+
+        await ctx.send("Adicionar **outro plano**? (s/n)")
         if (await bot.wait_for("message", check=check)).content.lower() != "s":
             break
-        i+=1
+        i += 1
 
     data = load_products()
     pid = str(len(data)+1)
-    data[pid] = {"name": nome, "pix": pix, "plans": plans}
+    data[pid] = {
+        "name": nome,
+        "desc": descricao,
+        "img": imagem,
+        "pix": pix,
+        "plans": plans
+    }
     save_products(data)
 
-    embed = discord.Embed(title=nome, description="Escolha um plano", color=RED)
+    embed = discord.Embed(title=nome, description=descricao, color=RED)
+    embed.set_image(url=imagem)
+
     await ctx.send(embed=embed, view=StorePanelView(pid, plans))
 
+
 bot.run(TOKEN)
+
