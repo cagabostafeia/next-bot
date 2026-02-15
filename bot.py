@@ -10,7 +10,7 @@ NEXT_HELPER = 1469446748635398164
 OWNER = 1469446742843068507
 STAFF_IDS = (NEXT_HELPER, OWNER)
 
-QR_PATH = "https://cdn.discordapp.com/attachments/1455599475836977184/1472468309780856842/pix.png?ex=6992ae7a&is=69915cfa&hm=db30565b3f5f376732c9d8123bde44aa629b1f8dd8d02af294ceadf9867df543&"
+PIX_QR_URL = "https://cdn.discordapp.com/attachments/1455599475836977184/1472468309780856842/pix.png"
 PRODUCTS_FILE = "produtos.json"
 COUPONS_FILE = "cupons.json"
 
@@ -273,6 +273,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
