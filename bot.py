@@ -228,10 +228,15 @@ async def loja_criar(ctx):
 
     await ctx.send("Envie a **imagem do produto** (ou um link):")
     msg_img = await bot.wait_for("message", check=check)
-    if msg_img.attachments:
-        imagem = msg_img.attachments[0].url
-    else:
-        imagem = msg_img.content
+if msg_img.attachments:
+    imagem = msg_img.attachments[0].url
+else:
+    imagem = msg_img.content.strip()
+
+# valida URL
+if not imagem.startswith("http"):
+    imagem = None
+
 
     await ctx.send("Digite a **chave PIX**:")
     pix = (await bot.wait_for("message", check=check)).content
@@ -267,12 +272,16 @@ async def loja_criar(ctx):
     save_products(data)
 
     embed = discord.Embed(title=nome, description=descricao, color=RED)
+
+if imagem:
     embed.set_image(url=imagem)
+
 
     await ctx.send(embed=embed, view=StorePanelView(pid, plans))
 
 
 bot.run(TOKEN)
+
 
 
 
