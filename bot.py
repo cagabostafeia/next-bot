@@ -169,18 +169,21 @@ class CartView(ui.View):
         else:
             await i.followup.send("❌ Cupom inválido", ephemeral=True)
 
-    @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
-    async def pay(self, i, _):
-        prod,_ = self.get()
-        e = discord.Embed(
-            title="💳 PAGAMENTO VIA PIX",
-            description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
-            color=RED
-        )
-        e.add_field(name="Chave", value=f"`{prod['pix']}`", inline=False)
-        e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
-        e.set_image(url="attachment://pix.png")
-        await i.response.send_message(embed=e, file=discord.File(QR_PATH, filename="pix.png"))
+@ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
+async def pay(self, i, _):
+    prod,_ = self.get()
+
+    e = discord.Embed(
+        title="💳 PAGAMENTO VIA PIX",
+        description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
+        color=RED
+    )
+    e.add_field(name="Chave", value=f"`{prod['pix']}`", inline=False)
+    e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
+
+    e.set_image(url=PIX_QR_URL)
+
+    await i.response.send_message(embed=e)
 
 # ========= APROVAR / REPROVAR =========
 @bot.command()
@@ -270,5 +273,6 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
