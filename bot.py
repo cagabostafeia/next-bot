@@ -142,16 +142,17 @@ class PlanSelect(ui.Select):
         await thread.send(embed=view.make_embed(), view=view)
         link = channel_link(GUILD_ID, thread.id)
 
- view = ui.View()
-view.add_item(
-    discord.ui.Button(label="🧾 Ir para o carrinho", url=link)
-)
+        view_link = ui.View()
+        view_link.add_item(
+            discord.ui.Button(label="🧾 Ir para o carrinho", url=link)
+        )
 
-await interaction.followup.send(
-    "🧾 Carrinho criado!",
-    view=view,
-    ephemeral=True
-)
+        await interaction.followup.send(
+            "🧾 Carrinho criado!",
+            view=view_link,
+            ephemeral=True
+        )
+
 
 
 class StorePanelView(ui.View):
@@ -531,6 +532,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
