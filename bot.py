@@ -241,12 +241,16 @@ else:
     data[pid] = {"name": nome, "desc": descricao, "img": imagem, "pix": pix, "plans": plans}
     save_products(data)
 
-    embed = discord.Embed(title=nome, description=descricao, color=RED)
+embed = discord.Embed(title=nome, description=descricao, color=RED)
+
+if imagem and imagem.startswith("http"):
     embed.set_image(url=imagem)
+
 
     await ctx.send(embed=embed, view=StorePanelView(pid, plans))
 
 bot.run(TOKEN)
+
 
 
 
