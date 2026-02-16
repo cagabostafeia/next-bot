@@ -77,10 +77,11 @@ def save_products(d): save_json(PRODUCTS_FILE, d)
 class PlanSelect(ui.Select):
     def __init__(self, pid, plans):
         options = [
-            discord.SelectOption(label=p["name"],
+            discord.SelectOption(
+                label=p["name"],
                 description=f"R$ {p['price']} | Estoque {p['stock']}",
-                value=k)
-            for k,p in plans.items()
+                value=k
+            ) for k,p in plans.items()
         ]
         super().__init__(placeholder="Escolha um plano", options=options)
         self.pid = pid
@@ -169,44 +170,18 @@ class CartView(ui.View):
         else:
             await i.followup.send("❌ Cupom inválido", ephemeral=True)
 
-@ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
-async def pay(self, i, _):
-    prod,_ = self.get()
-
-    e = discord.Embed(
-        title="💳 PAGAMENTO VIA PIX",
-        description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
-        color=RED
-    )
-    e.add_field(name="Chave", value=f"`{prod['pix']}`", inline=False)
-    e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
-
-    e.set_image(url=PIX_QR_URL)
-
-    await i.response.send_message(embed=e)
-
-# ========= APROVAR / REPROVAR =========
-@bot.command()
-async def aprovar(ctx):
-    if not is_staff(ctx.author): return
-    e = discord.Embed(title="✅ PAGAMENTO APROVADO",
-        description="Aguarde a entrega.",
-        color=0x2ecc71)
-    await ctx.send(embed=e)
-
-@bot.command()
-async def reprovar(ctx, *, motivo):
-    if not is_staff(ctx.author): return
-    e = discord.Embed(title="❌ PAGAMENTO REPROVADO",
-        description=f"> {motivo}",
-        color=0xe74c3c)
-    await ctx.send(embed=e)
-
-# ========= CLEAR =========
-@bot.command()
-async def clear(ctx, n: int = 50):
-    if not is_staff(ctx.author): return
-    await ctx.channel.purge(limit=n+1)
+    @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
+    async def pay(self, i, _):
+        prod,_ = self.get()
+        e = discord.Embed(
+            title="💳 PAGAMENTO VIA PIX",
+            description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
+            color=RED
+        )
+        e.add_field(name="Chave", value=f"`{prod['pix']}`", inline=False)
+        e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
+        e.set_image(url=PIX_QR_URL)
+        await i.response.send_message(embed=e)
 
 # ========= CRIAR PRODUTO =========
 @bot.command()
@@ -214,75 +189,44 @@ async def loja_criar(ctx):
     if not is_staff(ctx.author): return
     def check(m): return m.author == ctx.author and m.channel == ctx.channel
 
-    # limpa conversa anterior
-    try:
-        await ctx.channel.purge(limit=20)
-    except:
-        pass
-
-    await ctx.send("🛍️ **Criando novo produto**\nDigite o **nome do produto**:")
+    await ctx.send("Nome do produto:")
     nome = (await bot.wait_for("message", check=check)).content
 
-    await ctx.send("Digite a **descrição do produto**:")
+    await ctx.send("Descrição:")
     descricao = (await bot.wait_for("message", check=check)).content
 
-    await ctx.send("Envie a **imagem do produto** (ou um link):")
-    msg_img = await bot.wait_for("message", check=check)
-if msg_img.attachments:
-    imagem = msg_img.attachments[0].url
-else:
-    imagem = msg_img.content.strip()
+    await ctx.send("Imagem (link ou upload):")
+    msg = await bot.wait_for("message", check=check)
+    imagem = msg.attachments[0].url if msg.attachments else msg.content
 
-# valida URL
-if not imagem.startswith("http"):
-    imagem = None
-
-
-    await ctx.send("Digite a **chave PIX**:")
+    await ctx.send("Chave PIX:")
     pix = (await bot.wait_for("message", check=check)).content
 
     plans = {}
     i = 1
     while True:
-        await ctx.send(f"📦 **Plano {i}**\nNome:")
+        await ctx.send(f"Plano {i} nome:")
         pname = (await bot.wait_for("message", check=check)).content
-
         await ctx.send("Preço:")
         pprice = int((await bot.wait_for("message", check=check)).content)
-
         await ctx.send("Estoque:")
         pstock = int((await bot.wait_for("message", check=check)).content)
 
         plans[f"p{i}"] = {"name": pname, "price": pprice, "stock": pstock}
 
-        await ctx.send("Adicionar **outro plano**? (s/n)")
+        await ctx.send("Outro plano? (s/n)")
         if (await bot.wait_for("message", check=check)).content.lower() != "s":
             break
         i += 1
 
     data = load_products()
     pid = str(len(data)+1)
-    data[pid] = {
-        "name": nome,
-        "desc": descricao,
-        "img": imagem,
-        "pix": pix,
-        "plans": plans
-    }
+    data[pid] = {"name": nome, "desc": descricao, "img": imagem, "pix": pix, "plans": plans}
     save_products(data)
 
     embed = discord.Embed(title=nome, description=descricao, color=RED)
-
-if imagem:
     embed.set_image(url=imagem)
-
 
     await ctx.send(embed=embed, view=StorePanelView(pid, plans))
 
-
 bot.run(TOKEN)
-
-
-
-
-
