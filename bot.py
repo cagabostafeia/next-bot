@@ -19,6 +19,24 @@ RED = 0xff0000
 
 
 
+
+#========= aura v2
+
+async def dm_with_button(user_id, embed, channel_id):
+    try:
+        user = await bot.fetch_user(user_id)
+        link = channel_link(GUILD_ID, channel_id)
+
+        view = ui.View()
+        view.add_item(
+            discord.ui.Button(label="Ir para meu ticket", url=link)
+        )
+
+        await user.send(embed=embed, view=view)
+    except:
+        pass
+
+
 #===== DMSSSSS ==========
 
 
@@ -122,7 +140,19 @@ class PlanSelect(ui.Select):
 
         view = CartView(self.pid, self.values[0], interaction.user.id)
         await thread.send(embed=view.make_embed(), view=view)
-        await interaction.followup.send("🧾 Carrinho criado!", ephemeral=True)
+        link = channel_link(GUILD_ID, thread.id)
+
+ view = ui.View()
+view.add_item(
+    discord.ui.Button(label="🧾 Ir para o carrinho", url=link)
+)
+
+await interaction.followup.send(
+    "🧾 Carrinho criado!",
+    view=view,
+    ephemeral=True
+)
+
 
 class StorePanelView(ui.View):
     def __init__(self, pid, plans):
@@ -217,7 +247,7 @@ class CartView(ui.View):
         prod, _ = self.get()
 
         orders = load_orders()
-        orders[str(self.user_id)] = {
+        orders[str(i.channel.id)] = {
             "user_id": self.user_id,
             "channel_id": i.channel.id,
             "message_id": i.message.id,
@@ -263,7 +293,7 @@ async def finalizar(ctx):
 
     orders = load_orders()
     channel_id = ctx.channel.id
-    order = next((v for v in orders.values() if v["channel_id"] == channel_id), None)
+    order = orders.get(str(channel_id))
 
     embed = discord.Embed(
         title="📦 PEDIDO ENTREGUE",
@@ -279,7 +309,7 @@ async def finalizar(ctx):
             description="Seu pedido foi entregue com sucesso!\nObrigado pela preferência 💚",
             color=0x00ff99
         )
-        await dm_user(order["user_id"], dm)
+        await dm_with_button(order["user_id"], dm, order["channel_id"])
 
     # apagar msg do staff
     await asyncio.sleep(4)
@@ -312,7 +342,7 @@ async def reprovar(ctx, *, motivo):
     orders = load_orders()
     channel_id = ctx.channel.id
 
-    order = next((v for v in orders.values() if v["channel_id"] == channel_id), None)
+    order = orders.get(str(channel_id))
     if not order:
         return await ctx.send("❌ Nenhum pedido encontrado nesta thread.")
 
@@ -340,7 +370,7 @@ async def reprovar(ctx, *, motivo):
         description=f"Seu pagamento foi reprovado.\n\n**Motivo:** {motivo}",
         color=0xe74c3c
     )
-    await dm_user(order["user_id"], dm)
+    await dm_with_button(order["user_id"], dm, order["channel_id"])
 
     # apagar msg do staff
     await asyncio.sleep(4)
@@ -360,6 +390,22 @@ async def reprovar(ctx, *, motivo):
 
 
 
+class GoToCartView(ui.View):
+    def __init__(self, thread_id):
+        super().__init__(timeout=None)
+        self.thread_id = thread_id
+
+    @ui.button(label="🧾 Ir para o carrinho", style=discord.ButtonStyle.link)
+    async def go(self, interaction, _):
+        pass
+
+
+# ====== funcao aura =========
+
+
+def channel_link(guild_id, channel_id):
+    return f"https://discord.com/channels/{guild_id}/{channel_id}"
+
 
 
 # ============= Aprovar ==============
@@ -374,7 +420,7 @@ async def aprovar(ctx):
     orders = load_orders()
     channel_id = ctx.channel.id
 
-    order = next((v for v in orders.values() if v["channel_id"] == channel_id), None)
+    order = orders.get(str(channel_id))
     if not order:
         return await ctx.send("❌ Nenhum pedido encontrado nesta thread.")
 
@@ -401,7 +447,7 @@ async def aprovar(ctx):
         description="Seu pagamento foi aprovado!\nA entrega será feita no mesmo canal.",
         color=0x2ecc71
     )
-    await dm_user(order["user_id"], dm)
+    await dm_with_button(order["user_id"], dm, order["channel_id"])
 
     # apagar msg do staff
     await asyncio.sleep(4)
@@ -485,6 +531,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
