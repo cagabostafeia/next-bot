@@ -2,6 +2,7 @@ import discord, json, os, asyncio
 from discord.ext import commands, tasks
 from discord import ui
 
+
 # ========= CONFIG =========
 TOKEN = os.getenv("TOKEN")
 GUILD_ID = 1469437008131653766
@@ -14,6 +15,9 @@ PIX_QR_URL = "https://cdn.discordapp.com/attachments/1469446920136167616/1472850
 PRODUCTS_FILE = "produtos.json"
 COUPONS_FILE = "cupons.json"
 ORDERS_FILE = "pedidos.json"
+STATUS_FILE = "status.json"
+STATUS_CHANNEL = 1469446956307972251  # canal onde fica o painel
+STATUS_MESSAGE = None
 LOGS_ENTER = 1469446935764009261
 LOGS_SAIDA = 1469446942244471046
 LOGS_AGUARDANDO = 1469446925366464614
@@ -25,18 +29,13 @@ LOGS_REPROVAR = 1473012851282149568
 
 RED = 0xff0000
 
-# ========= logszzinha auraaa ========
+# ========= negocios randoms funcoes ========
 
 
 async def send_log(channel_id, embed):
     ch = bot.get_channel(channel_id)
     if ch:
         await ch.send(embed=embed)
-
-
-
-
-#===== DMSSSSS ==========
 
 
 async def dm_user(user_id, embed):
@@ -58,6 +57,128 @@ async def dm_with_button(user_id, embed, thread_id):
         await user.send(embed=embed, view=view)
     except Exception as e:
         print("Erro ao enviar DM:", e)
+
+def load_status():
+    if not os.path.exists(STATUS_FILE):
+        save_status({})
+    with open(STATUS_FILE, "r") as f:
+        return json.load(f)
+
+def save_status(d):
+    with open(STATUS_FILE, "w") as f:
+        json.dump(d, f, indent=4, ensure_ascii=False)
+
+
+def make_status_embed():
+    data = load_status()
+
+    e = discord.Embed(
+        title="📊 Status dos Produtos",
+        description="Status atual dos serviços",
+        color=0x2ecc71
+    )
+
+    if not data:
+        e.add_field(name="Nenhum produto", value="Use !status_add", inline=False)
+        return e
+
+    for nome, st in data.items():
+        emoji = {
+            "on": "🟢",
+            "manut": "🟡",
+            "off": "🔴"
+        }.get(st["state"], "⚪")
+
+        label = {
+            "on": "ATUALIZADO",
+            "manut": "MANUTENÇÃO",
+            "off": "OFFLINE"
+        }.get(st["state"], "DESCONHECIDO")
+
+        e.add_field(
+            name=f"{emoji} {nome}",
+            value=f"Status: **{label}**",
+            inline=False
+        )
+
+    e.set_footer(text="Atualizado automaticamente")
+    return e
+
+
+# ===== commandos bot painel status
+
+
+@bot.command()
+async def status_painel(ctx):
+    if not is_staff(ctx.author):
+        return
+
+    ch = bot.get_channel(STATUS_CHANNEL)
+    embed = make_status_embed()
+    msg = await ch.send(embed=embed)
+
+    global STATUS_MESSAGE
+    STATUS_MESSAGE = msg.id
+
+    await ctx.send("📊 Painel de status criado!", delete_after=3)
+
+# ========= mais comandos bot painel statuss
+
+
+
+@bot.command()
+async def status_add(ctx, *, nome):
+    if not is_staff(ctx.author):
+        return
+    data = load_status()
+    data[nome] = {"state": "on"}
+    save_status(data)
+    await update_status()
+    await ctx.send(f"✅ `{nome}` adicionado")
+
+@bot.command()
+async def status_set(ctx, nome, estado):
+    if not is_staff(ctx.author):
+        return
+    estado = estado.lower()
+
+    if estado not in ("on", "manut", "off"):
+        return await ctx.send("Use: on / manut / off")
+
+    data = load_status()
+    if nome not in data:
+        return await ctx.send("Produto não existe")
+
+    data[nome]["state"] = estado
+    save_status(data)
+    await update_status()
+    await ctx.send(f"🔄 `{nome}` agora está {estado}")
+
+@bot.command()
+async def status_del(ctx, *, nome):
+    if not is_staff(ctx.author):
+        return
+    data = load_status()
+    data.pop(nome, None)
+    save_status(data)
+    await update_status()
+    await ctx.send(f"🗑️ `{nome}` removido")
+
+
+# ======== update statuss
+
+
+async def update_status():
+    if not STATUS_MESSAGE:
+        return
+
+    ch = bot.get_channel(STATUS_CHANNEL)
+    try:
+        msg = await ch.fetch_message(STATUS_MESSAGE)
+        await msg.edit(embed=make_status_embed())
+    except:
+        pass
+
 
 
 
@@ -660,6 +781,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
