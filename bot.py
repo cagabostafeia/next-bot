@@ -14,8 +14,125 @@ PIX_QR_URL = "https://cdn.discordapp.com/attachments/1469446920136167616/1472850
 PRODUCTS_FILE = "produtos.json"
 COUPONS_FILE = "cupons.json"
 ORDERS_FILE = "pedidos.json"
+LOGS_ENTER = 1469446935764009261
+LOGS_SAIDA = 1469446942244471046
+LOGS_AGUARDANDO = 1469446925366464614
+LOGS_VENDAS = 1469446933205745806
+LOGS_PEDIDOS = 1469446930689032205
+LOGS_ESTOQUE = 1469446928356868156
+LOGS_REPROVAR = 1473012851282149568
 
 RED = 0xff0000
+
+# ========= logszzinha auraaa ========
+
+
+async def send_log(channel_id, embed):
+    ch = bot.get_channel(channel_id)
+    if ch:
+        await ch.send(embed=embed)
+
+
+# ========== logs enter
+
+
+@bot.event
+async def on_member_join(member):
+    e = discord.Embed(
+        title="🟢 Novo membro",
+        color=0x2ecc71
+    )
+    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
+    e.add_field(name="Conta criada", value=discord.utils.format_dt(member.created_at, "R"))
+    e.set_thumbnail(url=member.display_avatar.url)
+
+    await send_log(LOGS_ENTER, e)
+
+# ========== logs saida
+
+
+
+
+@bot.event
+async def on_member_remove(member):
+    e = discord.Embed(
+        title="🔴 Membro saiu",
+        color=0xe74c3c
+    )
+    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
+
+    await send_log(LOGS_SAIDA, e)
+
+
+# =========== criar carrinhos logss
+
+
+
+log = discord.Embed(
+    title="🧾 Novo pedido",
+    color=0xf1c40f
+)
+log.add_field(name="Usuário", value=f"{interaction.user} ({interaction.user.id})")
+log.add_field(name="Produto", value=prod["name"])
+log.add_field(name="Thread", value=thread.mention)
+
+await send_log(LOGS_PEDIDOS, log)
+
+# =============== logs Aguardando
+
+
+log = discord.Embed(
+    title="💳 Pedido enviado para pagamento",
+    color=0x3498db
+)
+log.add_field(name="Usuário", value=f"{i.user} ({self.user_id})")
+log.add_field(name="Total", value=f"R$ {self.total()}")
+log.add_field(name="Thread", value=i.channel.mention)
+
+await send_log(LOGS_AGUARDANDO, log)
+
+
+
+# =========== logs vendas
+
+log = discord.Embed(
+    title="✅ Venda aprovada",
+    color=0x2ecc71
+)
+log.add_field(name="Usuário", value=f"<@{order['user_id']}>")
+log.add_field(name="Thread", value=ctx.channel.mention)
+
+await send_log(LOGS_VENDAS, log)
+
+# ========== logs estoque
+
+
+
+log = discord.Embed(
+    title="📦 Produto criado",
+    color=0x9b59b6
+)
+log.add_field(name="Produto", value=nome)
+log.add_field(name="Planos", value=str(len(plans)))
+
+await send_log(LOGS_ESTOQUE, log)
+
+
+
+# ========== logs reprovar
+
+
+
+
+log = discord.Embed(
+    title="❌ Venda reprovada",
+    color=0xe74c3c
+)
+log.add_field(name="Usuário", value=f"<@{order['user_id']}>")
+log.add_field(name="Motivo", value=motivo)
+log.add_field(name="Thread", value=ctx.channel.mention)
+
+await send_log(LOGS_REPROVAR, log)
 
 
 
@@ -532,6 +649,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
