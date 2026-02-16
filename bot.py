@@ -387,6 +387,52 @@ async def finalizar(ctx):
         pass
 
 
+# ============ produtinho testee ==
+
+
+import random
+
+@bot.command()
+async def teste(ctx):
+    if not is_staff(ctx.author):
+        return
+
+    data = load_products()
+
+    pid = str(len(data) + 1)
+
+    plans = {
+        "p1": {
+            "name": "Plano Básico",
+            "price": random.randint(10, 50),
+            "stock": random.randint(1, 10)
+        },
+        "p2": {
+            "name": "Plano Premium",
+            "price": random.randint(60, 150),
+            "stock": random.randint(1, 10)
+        }
+    }
+
+    data[pid] = {
+        "name": "Produto Teste",
+        "desc": "Produto para testes",
+        "img": "https://cdn.discordapp.com/attachments/1469446920136167616/1472850758436262092/pix.png",
+        "pix": "00020126330014BR.GOV.BCB.PIX0114teste@pix.com5204000053039865802BR5920NEXT COMMUNITY TESTE6009SAO PAULO62070503***6304ABCD",
+        "plans": plans
+    }
+
+    save_products(data)
+
+    embed = discord.Embed(
+        title="Produto Teste",
+        description="Produto para testes",
+        color=RED
+    )
+    embed.set_image(url=data[pid]["img"])
+
+    await ctx.send("🧪 Produto de teste criado com sucesso!", embed=embed, view=StorePanelView(pid, plans))
+
 
 
 # ============== Reprovar ================
@@ -613,6 +659,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
