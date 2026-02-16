@@ -265,56 +265,60 @@ class CartView(ui.View):
         else:
             await interaction.followup.send("❌ Cupom inválido", ephemeral=True)
 
-    @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
-    async def pay(self, i, _):
-        prod, _ = self.get()
-        if data[self.pid]["plans"][self.plan_id]["stock"] < self.qtd:
-            return await i.response.send_message("❌ Estoque insuficiente.", ephemeral=True)
+@ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
+async def pay(self, i, _):
+    # carregar produtos
+    data = load_products()
+    prod = data[self.pid]
+    plan = prod["plans"][self.plan_id]
 
-        # diminuir estoque
-        data = load_products()
-        data[self.pid]["plans"][self.plan_id]["stock"] -= self.qtd
-        save_products(data)
+    # checar estoque
+    if plan["stock"] < self.qtd:
+        return await i.response.send_message("❌ Estoque insuficiente.", ephemeral=True)
 
-        # se zerar, logar
-        if data[self.pid]["plans"][self.plan_id]["stock"] <= 0:
-            log = discord.Embed(title="📦 ESTOQUE ESGOTADO", color=0xe67e22)
-            log.add_field(name="Produto", value=data[self.pid]["name"])
-            log.add_field(name="Plano", value=data[self.pid]["plans"][self.plan_id]["name"])
-            log.add_field(name="Thread", value=i.channel.mention)
+    # diminuir estoque
+    plan["stock"] -= self.qtd
+    save_products(data)
 
-            await send_log(LOGS_ESTOQUE, log)
-
-
-        orders = load_orders()
-        orders[str(i.channel.id)] = {
-            "user_id": self.user_id,
-            "channel_id": i.channel.id,
-            "message_id": i.message.id,
-            "status": "Aguardando Pagamento"
-        }
-        save_orders(orders)
-
-        e = discord.Embed(
-            title="💳 PAGAMENTO VIA PIX",
-            description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
-            color=RED
-        )
-
-        e.add_field(name="Chave PIX", value=f"`{prod['pix']}`", inline=False)
-        e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
-
-        if PIX_QR_URL.startswith("http"):
-            e.set_image(url=PIX_QR_URL)
-
-        log = discord.Embed(title="💳 Pedido enviado", color=0x3498db)
-        log.add_field(name="Usuário", value=f"{i.user} ({self.user_id})")
-        log.add_field(name="Total", value=f"R$ {self.total()}")
+    # se zerar, logar
+    if plan["stock"] <= 0:
+        log = discord.Embed(title="📦 ESTOQUE ESGOTADO", color=0xe67e22)
+        log.add_field(name="Produto", value=prod["name"])
+        log.add_field(name="Plano", value=plan["name"])
         log.add_field(name="Thread", value=i.channel.mention)
+        await send_log(LOGS_ESTOQUE, log)
 
-        await send_log(LOGS_AGUARDANDO, log)
+    # registrar pedido
+    orders = load_orders()
+    orders[str(i.channel.id)] = {
+        "user_id": self.user_id,
+        "channel_id": i.channel.id,
+        "message_id": i.message.id,
+        "status": "Aguardando Pagamento"
+    }
+    save_orders(orders)
 
-        await i.response.send_message(embed=e)
+    # embed de pagamento
+    e = discord.Embed(
+        title="💳 PAGAMENTO VIA PIX",
+        description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
+        color=RED
+    )
+    e.add_field(name="Chave PIX", value=f"`{prod['pix']}`", inline=False)
+    e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
+
+    if PIX_QR_URL.startswith("http"):
+        e.set_image(url=PIX_QR_URL)
+
+    # log aguardando
+    log = discord.Embed(title="💳 Pedido enviado", color=0x3498db)
+    log.add_field(name="Usuário", value=f"{i.user} ({self.user_id})")
+    log.add_field(name="Total", value=f"R$ {self.total()}")
+    log.add_field(name="Thread", value=i.channel.mention)
+    await send_log(LOGS_AGUARDANDO, log)
+
+    await i.response.send_message(embed=e)
+
 
 # ============ clear ============
 
@@ -594,6 +598,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
