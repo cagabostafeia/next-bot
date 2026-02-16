@@ -266,7 +266,8 @@ async def finalizar(ctx):
 
 @bot.command()
 async def reprovar(ctx, *, motivo):
-    if not is_staff(ctx.author): return
+    if not is_staff(ctx.author):
+        return
 
     orders = load_orders()
     channel_id = ctx.channel.id
@@ -285,13 +286,14 @@ async def reprovar(ctx, *, motivo):
     embed.set_footer(text="Status: Pagamento Reprovado")
     await msg.edit(embed=embed)
 
-embed_thread = discord.Embed(
-    title="❌ PAGAMENTO REPROVADO",
-    color=0xe74c3c
-)
-embed_thread.add_field(name="Motivo:", value=motivo, inline=False)
+    embed_thread = discord.Embed(
+        title="❌ PAGAMENTO REPROVADO",
+        color=0xe74c3c
+    )
+    embed_thread.add_field(name="Motivo:", value=motivo, inline=False)
 
-await ctx.send(embed=embed_thread)
+    await ctx.send(embed=embed_thread)
+
 
 
 # ============= Aprovar ==============
@@ -300,7 +302,8 @@ await ctx.send(embed=embed_thread)
 
 @bot.command()
 async def aprovar(ctx):
-    if not is_staff(ctx.author): return
+    if not is_staff(ctx.author):
+        return
 
     orders = load_orders()
     channel_id = ctx.channel.id
@@ -319,12 +322,14 @@ async def aprovar(ctx):
     embed.set_footer(text="Status: Pagamento Aprovado")
     await msg.edit(embed=embed)
 
-embed_thread = discord.Embed(
-    title="✅ PAGAMENTO APROVADO",
-    description="Pagamento confirmado.\nAguarde a entrega.",
-    color=0x2ecc71
-)
-await ctx.send(embed=embed_thread)
+    embed_thread = discord.Embed(
+        title="✅ PAGAMENTO APROVADO",
+        description="Pagamento confirmado.\nAguarde a entrega.",
+        color=0x2ecc71
+    )
+
+    await ctx.send(embed=embed_thread)
+
 
 
 
@@ -401,6 +406,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
