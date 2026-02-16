@@ -192,29 +192,27 @@ async def pay(self, i, _):
 # ========= CRIAR PRODUTO =========
 @bot.command()
 async def loja_criar(ctx):
-    if not is_staff(ctx.author): return
-    def check(m): return m.author == ctx.author and m.channel == ctx.channel
+    if not is_staff(ctx.author):
+        return
 
-    await ctx.send("Nome do produto:")
+    def check(m):
+        return m.author == ctx.author and m.channel == ctx.channel
+
+    await ctx.send("🛍️ Criando produto\nNome do produto:")
     nome = (await bot.wait_for("message", check=check)).content
 
     await ctx.send("Descrição:")
     descricao = (await bot.wait_for("message", check=check)).content
 
-await ctx.send("Imagem (link, upload ou N para não usar):")
-msg = await bot.wait_for("message", check=check)
+    await ctx.send("Imagem (link, upload ou N para não usar):")
+    msg = await bot.wait_for("message", check=check)
 
-if msg.attachments:
-    imagem = msg.attachments[0].url
-else:
-    txt = msg.content.strip()
-    if txt.lower() == "n":
+    if msg.content.upper() == "N":
         imagem = None
-    elif txt.startswith("http"):
-        imagem = txt
+    elif msg.attachments:
+        imagem = msg.attachments[0].url
     else:
-        imagem = None
-
+        imagem = msg.content.strip()
 
     await ctx.send("Chave PIX:")
     pix = (await bot.wait_for("message", check=check)).content
@@ -224,12 +222,18 @@ else:
     while True:
         await ctx.send(f"Plano {i} nome:")
         pname = (await bot.wait_for("message", check=check)).content
+
         await ctx.send("Preço:")
         pprice = int((await bot.wait_for("message", check=check)).content)
+
         await ctx.send("Estoque:")
         pstock = int((await bot.wait_for("message", check=check)).content)
 
-        plans[f"p{i}"] = {"name": pname, "price": pprice, "stock": pstock}
+        plans[f"p{i}"] = {
+            "name": pname,
+            "price": pprice,
+            "stock": pstock
+        }
 
         await ctx.send("Outro plano? (s/n)")
         if (await bot.wait_for("message", check=check)).content.lower() != "s":
@@ -237,19 +241,28 @@ else:
         i += 1
 
     data = load_products()
-    pid = str(len(data)+1)
-    data[pid] = {"name": nome, "desc": descricao, "img": imagem, "pix": pix, "plans": plans}
+    pid = str(len(data) + 1)
+
+    data[pid] = {
+        "name": nome,
+        "desc": descricao,
+        "img": imagem,
+        "pix": pix,
+        "plans": plans
+    }
+
     save_products(data)
 
-embed = discord.Embed(title=nome, description=descricao, color=RED)
+    embed = discord.Embed(title=nome, description=descricao, color=RED)
 
-if imagem and imagem.startswith("http"):
-    embed.set_image(url=imagem)
-
+    if imagem and imagem.startswith("http"):
+        embed.set_image(url=imagem)
 
     await ctx.send(embed=embed, view=StorePanelView(pid, plans))
 
+
 bot.run(TOKEN)
+
 
 
 
