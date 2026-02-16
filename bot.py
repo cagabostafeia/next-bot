@@ -33,125 +33,6 @@ async def send_log(channel_id, embed):
         await ch.send(embed=embed)
 
 
-# ========== logs enter
-
-
-@bot.event
-async def on_member_join(member):
-    e = discord.Embed(
-        title="🟢 Novo membro",
-        color=0x2ecc71
-    )
-    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
-    e.add_field(name="Conta criada", value=discord.utils.format_dt(member.created_at, "R"))
-    e.set_thumbnail(url=member.display_avatar.url)
-
-    await send_log(LOGS_ENTER, e)
-
-# ========== logs saida
-
-
-
-
-@bot.event
-async def on_member_remove(member):
-    e = discord.Embed(
-        title="🔴 Membro saiu",
-        color=0xe74c3c
-    )
-    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
-
-    await send_log(LOGS_SAIDA, e)
-
-
-# =========== criar carrinhos logss
-
-
-
-log = discord.Embed(
-    title="🧾 Novo pedido",
-    color=0xf1c40f
-)
-log.add_field(name="Usuário", value=f"{interaction.user} ({interaction.user.id})")
-log.add_field(name="Produto", value=prod["name"])
-log.add_field(name="Thread", value=thread.mention)
-
-await send_log(LOGS_PEDIDOS, log)
-
-# =============== logs Aguardando
-
-
-log = discord.Embed(
-    title="💳 Pedido enviado para pagamento",
-    color=0x3498db
-)
-log.add_field(name="Usuário", value=f"{i.user} ({self.user_id})")
-log.add_field(name="Total", value=f"R$ {self.total()}")
-log.add_field(name="Thread", value=i.channel.mention)
-
-await send_log(LOGS_AGUARDANDO, log)
-
-
-
-# =========== logs vendas
-
-log = discord.Embed(
-    title="✅ Venda aprovada",
-    color=0x2ecc71
-)
-log.add_field(name="Usuário", value=f"<@{order['user_id']}>")
-log.add_field(name="Thread", value=ctx.channel.mention)
-
-await send_log(LOGS_VENDAS, log)
-
-# ========== logs estoque
-
-
-
-log = discord.Embed(
-    title="📦 Produto criado",
-    color=0x9b59b6
-)
-log.add_field(name="Produto", value=nome)
-log.add_field(name="Planos", value=str(len(plans)))
-
-await send_log(LOGS_ESTOQUE, log)
-
-
-
-# ========== logs reprovar
-
-
-
-
-log = discord.Embed(
-    title="❌ Venda reprovada",
-    color=0xe74c3c
-)
-log.add_field(name="Usuário", value=f"<@{order['user_id']}>")
-log.add_field(name="Motivo", value=motivo)
-log.add_field(name="Thread", value=ctx.channel.mention)
-
-await send_log(LOGS_REPROVAR, log)
-
-
-
-
-#========= aura v2
-
-async def dm_with_button(user_id, embed, channel_id):
-    try:
-        user = await bot.fetch_user(user_id)
-        link = channel_link(GUILD_ID, channel_id)
-
-        view = ui.View()
-        view.add_item(
-            discord.ui.Button(label="Ir para meu ticket", url=link)
-        )
-
-        await user.send(embed=embed, view=view)
-    except:
-        pass
 
 
 #===== DMSSSSS ==========
@@ -257,6 +138,13 @@ class PlanSelect(ui.Select):
 
         view = CartView(self.pid, self.values[0], interaction.user.id)
         await thread.send(embed=view.make_embed(), view=view)
+        log = discord.Embed(title="🧾 Novo pedido", color=0xf1c40f)
+        log.add_field(name="Usuário", value=f"{interaction.user} ({interaction.user.id})")
+        log.add_field(name="Produto", value=prod["name"])
+        log.add_field(name="Thread", value=thread.mention)
+
+        await send_log(LOGS_PEDIDOS, log)
+
         link = channel_link(GUILD_ID, thread.id)
 
         view_link = ui.View()
@@ -385,6 +273,13 @@ class CartView(ui.View):
         if PIX_QR_URL.startswith("http"):
             e.set_image(url=PIX_QR_URL)
 
+        log = discord.Embed(title="💳 Pedido enviado", color=0x3498db)
+        log.add_field(name="Usuário", value=f"{i.user} ({self.user_id})")
+        log.add_field(name="Total", value=f"R$ {self.total()}")
+        log.add_field(name="Thread", value=i.channel.mention)
+
+        await send_log(LOGS_AGUARDANDO, log)
+
         await i.response.send_message(embed=e)
 
 # ============ clear ============
@@ -490,6 +385,14 @@ async def reprovar(ctx, *, motivo):
     )
     await dm_with_button(order["user_id"], dm, order["channel_id"])
 
+
+    log = discord.Embed(title="❌ Venda reprovada", color=0xe74c3c)
+    log.add_field(name="Usuário", value=f"<@{order['user_id']}>")
+    log.add_field(name="Motivo", value=motivo)
+    log.add_field(name="Thread", value=ctx.channel.mention)
+
+    await send_log(LOGS_REPROVAR, log)
+
     # apagar msg do staff
     await asyncio.sleep(4)
     try:
@@ -557,6 +460,14 @@ async def aprovar(ctx):
         description="Pagamento confirmado.\nAguarde a entrega.",
         color=0x2ecc71
     )
+    
+    log = discord.Embed(title="✅ Venda aprovada", color=0x2ecc71)
+    log.add_field(name="Usuário", value=f"<@{order['user_id']}>")
+    log.add_field(name="Thread", value=ctx.channel.mention)
+
+    await send_log(LOGS_VENDAS, log)
+
+    
     await ctx.send(embed=embed_thread)
 
     # DM
@@ -649,6 +560,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
