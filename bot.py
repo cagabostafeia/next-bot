@@ -10,7 +10,7 @@ NEXT_HELPER = 1469446748635398164
 OWNER = 1469446742843068507
 STAFF_IDS = (NEXT_HELPER, OWNER)
 
-PIX_QR_URL = "https://cdn.discordapp.com/attachments/1455599475836977184/1472468309780856842/pix.png"
+PIX_QR_URL = "https://cdn.discordapp.com/attachments/1469446920136167616/1472850758436262092/pix.png"
 PRODUCTS_FILE = "produtos.json"
 COUPONS_FILE = "cupons.json"
 
@@ -180,7 +180,9 @@ class CartView(ui.View):
         )
         e.add_field(name="Chave", value=f"`{prod['pix']}`", inline=False)
         e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
-        e.set_image(url=PIX_QR_URL)
+        if PIX_QR_URL.startswith("http"):
+    e.set_image(url=PIX_QR_URL)
+
         await i.response.send_message(embed=e)
 
 # ========= CRIAR PRODUTO =========
@@ -230,3 +232,4 @@ async def loja_criar(ctx):
     await ctx.send(embed=embed, view=StorePanelView(pid, plans))
 
 bot.run(TOKEN)
+
