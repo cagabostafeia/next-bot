@@ -46,6 +46,19 @@ async def dm_user(user_id, embed):
         pass
 
 
+async def dm_with_button(user_id, embed, thread_id):
+    try:
+        user = await bot.fetch_user(user_id)
+        view = ui.View()
+        view.add_item(discord.ui.Button(
+            label="🧾 Ir para o carrinho",
+            url=channel_link(GUILD_ID, thread_id)
+        ))
+        await user.send(embed=embed, view=view)
+    except Exception as e:
+        print("Erro ao enviar DM:", e)
+
+
 
 
 # ========= BOT =========
@@ -261,16 +274,16 @@ class CartView(ui.View):
 
     @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
     async def pay(self, interaction: discord.Interaction, _):
-        data, prod, plan = self.get()
+        data = load_products()
+        prod = data[self.pid]
+        plan = prod["plans"][self.plan_id]
 
         if plan["stock"] < self.qtd:
             return await interaction.response.send_message("❌ Estoque insuficiente.", ephemeral=True)
 
-        # diminuir estoque
         plan["stock"] -= self.qtd
         save_products(data)
 
-        # log se zerar
         if plan["stock"] <= 0:
             log = discord.Embed(title="📦 ESTOQUE ESGOTADO", color=0xe67e22)
             log.add_field(name="Produto", value=prod["name"])
@@ -349,6 +362,15 @@ async def finalizar(ctx):
             color=0x00ff99
         )
         await dm_with_button(order["user_id"], dm, order["channel_id"])
+        
+        log = discord.Embed(title="📦 Pedido finalizado", color=0x00ff99)
+        log.add_field(name="Usuário", value=f"<@{order['user_id']}>")
+        log.add_field(name="Thread", value=ctx.channel.mention)
+        await send_log(LOGS_VENDAS, log)
+        
+        orders.pop(str(channel_id), None)
+        save_orders(orders)
+
 
     # apagar msg do staff
     await asyncio.sleep(4)
@@ -418,6 +440,11 @@ async def reprovar(ctx, *, motivo):
     log.add_field(name="Thread", value=ctx.channel.mention)
 
     await send_log(LOGS_REPROVAR, log)
+
+    
+    orders.pop(str(channel_id), None)
+    save_orders(orders)
+
 
     # apagar msg do staff
     await asyncio.sleep(4)
@@ -586,6 +613,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
