@@ -201,9 +201,20 @@ async def loja_criar(ctx):
     await ctx.send("Descrição:")
     descricao = (await bot.wait_for("message", check=check)).content
 
-    await ctx.send("Imagem (link ou upload):")
-    msg = await bot.wait_for("message", check=check)
-    imagem = msg.attachments[0].url if msg.attachments else msg.content
+await ctx.send("Imagem (link, upload ou N para não usar):")
+msg = await bot.wait_for("message", check=check)
+
+if msg.attachments:
+    imagem = msg.attachments[0].url
+else:
+    txt = msg.content.strip()
+    if txt.lower() == "n":
+        imagem = None
+    elif txt.startswith("http"):
+        imagem = txt
+    else:
+        imagem = None
+
 
     await ctx.send("Chave PIX:")
     pix = (await bot.wait_for("message", check=check)).content
@@ -236,5 +247,6 @@ async def loja_criar(ctx):
     await ctx.send(embed=embed, view=StorePanelView(pid, plans))
 
 bot.run(TOKEN)
+
 
 
