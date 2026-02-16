@@ -191,21 +191,22 @@ class CartView(ui.View):
         self.qtd = 1
         self.discount = 0
 
+    # ===== dados =====
     def get(self):
         data = load_products()
         prod = data[self.pid]
         plan = prod["plans"][self.plan_id]
-        return prod, plan
+        return data, prod, plan
 
     def total(self):
-        prod, plan = self.get()
+        _, _, plan = self.get()
         base = plan["price"] * self.qtd
         if self.discount:
             return int(base * (1 - self.discount / 100))
         return base
 
     def make_embed(self):
-        prod, plan = self.get()
+        _, prod, plan = self.get()
         e = discord.Embed(title=f"🛒 {prod['name']}", color=RED)
         e.add_field(name="Plano", value=plan["name"])
         e.add_field(name="Preço", value=f"R$ {plan['price']}")
@@ -218,24 +219,21 @@ class CartView(ui.View):
         return e
 
     async def refresh(self, interaction):
-        await interaction.response.edit_message(
-            embed=self.make_embed(),
-            view=self
-        )
+        await interaction.response.edit_message(embed=self.make_embed(), view=self)
+
+    # ===== botões =====
 
     @ui.button(label="➕", style=discord.ButtonStyle.secondary)
     async def plus(self, interaction: discord.Interaction, _):
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
-            return
+            return await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
         self.qtd += 1
         await self.refresh(interaction)
 
     @ui.button(label="➖", style=discord.ButtonStyle.secondary)
     async def minus(self, interaction: discord.Interaction, _):
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
-            return
+            return await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
         if self.qtd > 1:
             self.qtd -= 1
         await self.refresh(interaction)
@@ -243,13 +241,9 @@ class CartView(ui.View):
     @ui.button(label="🎟️ Cupom", style=discord.ButtonStyle.primary)
     async def aplicar_cupom(self, interaction: discord.Interaction, _):
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
-            return
+            return await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
 
-        await interaction.response.send_message(
-            "Envie o código do cupom:",
-            ephemeral=True
-        )
+        await interaction.response.send_message("Envie o código do cupom:", ephemeral=True)
 
         def check(m):
             return m.author.id == self.user_id and m.channel == interaction.channel
@@ -265,59 +259,53 @@ class CartView(ui.View):
         else:
             await interaction.followup.send("❌ Cupom inválido", ephemeral=True)
 
-@ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
-async def pay(self, i, _):
-    # carregar produtos
-    data = load_products()
-    prod = data[self.pid]
-    plan = prod["plans"][self.plan_id]
+    @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
+    async def pay(self, interaction: discord.Interaction, _):
+        data, prod, plan = self.get()
 
-    # checar estoque
-    if plan["stock"] < self.qtd:
-        return await i.response.send_message("❌ Estoque insuficiente.", ephemeral=True)
+        if plan["stock"] < self.qtd:
+            return await interaction.response.send_message("❌ Estoque insuficiente.", ephemeral=True)
 
-    # diminuir estoque
-    plan["stock"] -= self.qtd
-    save_products(data)
+        # diminuir estoque
+        plan["stock"] -= self.qtd
+        save_products(data)
 
-    # se zerar, logar
-    if plan["stock"] <= 0:
-        log = discord.Embed(title="📦 ESTOQUE ESGOTADO", color=0xe67e22)
-        log.add_field(name="Produto", value=prod["name"])
-        log.add_field(name="Plano", value=plan["name"])
-        log.add_field(name="Thread", value=i.channel.mention)
-        await send_log(LOGS_ESTOQUE, log)
+        # log se zerar
+        if plan["stock"] <= 0:
+            log = discord.Embed(title="📦 ESTOQUE ESGOTADO", color=0xe67e22)
+            log.add_field(name="Produto", value=prod["name"])
+            log.add_field(name="Plano", value=plan["name"])
+            log.add_field(name="Thread", value=interaction.channel.mention)
+            await send_log(LOGS_ESTOQUE, log)
 
-    # registrar pedido
-    orders = load_orders()
-    orders[str(i.channel.id)] = {
-        "user_id": self.user_id,
-        "channel_id": i.channel.id,
-        "message_id": i.message.id,
-        "status": "Aguardando Pagamento"
-    }
-    save_orders(orders)
+        orders = load_orders()
+        orders[str(interaction.channel.id)] = {
+            "user_id": self.user_id,
+            "channel_id": interaction.channel.id,
+            "message_id": interaction.message.id,
+            "status": "Aguardando Pagamento"
+        }
+        save_orders(orders)
 
-    # embed de pagamento
-    e = discord.Embed(
-        title="💳 PAGAMENTO VIA PIX",
-        description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
-        color=RED
-    )
-    e.add_field(name="Chave PIX", value=f"`{prod['pix']}`", inline=False)
-    e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
+        e = discord.Embed(
+            title="💳 PAGAMENTO VIA PIX",
+            description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
+            color=RED
+        )
+        e.add_field(name="Chave PIX", value=f"`{prod['pix']}`", inline=False)
+        e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
 
-    if PIX_QR_URL.startswith("http"):
-        e.set_image(url=PIX_QR_URL)
+        if PIX_QR_URL.startswith("http"):
+            e.set_image(url=PIX_QR_URL)
 
-    # log aguardando
-    log = discord.Embed(title="💳 Pedido enviado", color=0x3498db)
-    log.add_field(name="Usuário", value=f"{i.user} ({self.user_id})")
-    log.add_field(name="Total", value=f"R$ {self.total()}")
-    log.add_field(name="Thread", value=i.channel.mention)
-    await send_log(LOGS_AGUARDANDO, log)
+        log = discord.Embed(title="💳 Pedido enviado", color=0x3498db)
+        log.add_field(name="Usuário", value=f"{interaction.user} ({self.user_id})")
+        log.add_field(name="Total", value=f"R$ {self.total()}")
+        log.add_field(name="Thread", value=interaction.channel.mention)
+        await send_log(LOGS_AGUARDANDO, log)
 
-    await i.response.send_message(embed=e)
+        await interaction.response.send_message(embed=e)
+
 
 
 # ============ clear ============
@@ -598,6 +586,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
