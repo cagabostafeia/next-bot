@@ -106,7 +106,6 @@ class StorePanelView(ui.View):
         super().__init__(timeout=None)
         self.add_item(PlanSelect(pid, plans))
 
-# ========= CARRINHO =========
 class CartView(ui.View):
     def __init__(self, pid, plan_id, user_id):
         super().__init__(timeout=None)
@@ -126,7 +125,7 @@ class CartView(ui.View):
         prod, plan = self.get()
         base = plan["price"] * self.qtd
         if self.discount:
-            return int(base * (1 - self.discount/100))
+            return int(base * (1 - self.discount / 100))
         return base
 
     def make_embed(self):
@@ -134,59 +133,83 @@ class CartView(ui.View):
         e = discord.Embed(title=f"🛒 {prod['name']}", color=RED)
         e.add_field(name="Plano", value=plan["name"])
         e.add_field(name="Preço", value=f"R$ {plan['price']}")
-        e.add_field(name="Qtd", value=self.qtd)
+        e.add_field(name="Quantidade", value=self.qtd)
         if self.discount:
             e.add_field(name="Cupom", value=f"{self.discount}%")
         e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
         e.set_footer(text="Status: aguardando pagamento")
         return e
 
-    async def refresh(self, i):
-        await i.message.edit(embed=self.make_embed(), view=self)
+    async def refresh(self, interaction):
+        await interaction.response.edit_message(
+            embed=self.make_embed(),
+            view=self
+        )
 
     @ui.button(label="➕", style=discord.ButtonStyle.secondary)
-    async def plus(self, i, _):
-        if i.user.id != self.user_id: return
+    async def plus(self, interaction: discord.Interaction, _):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
+            return
         self.qtd += 1
-        await self.refresh(i)
+        await self.refresh(interaction)
 
     @ui.button(label="➖", style=discord.ButtonStyle.secondary)
-    async def minus(self, i, _):
-        if i.user.id != self.user_id: return
-        if self.qtd > 1: self.qtd -= 1
-        await self.refresh(i)
+    async def minus(self, interaction: discord.Interaction, _):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
+            return
+        if self.qtd > 1:
+            self.qtd -= 1
+        await self.refresh(interaction)
 
     @ui.button(label="🎟️ Cupom", style=discord.ButtonStyle.primary)
-    async def cupom(self, i, _):
-        await i.response.send_message("Envie o código do cupom:", ephemeral=True)
-        def check(m): return m.author.id == self.user_id and m.channel == i.channel
+    async def aplicar_cupom(self, interaction: discord.Interaction, _):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
+            return
+
+        await interaction.response.send_message(
+            "Envie o código do cupom:",
+            ephemeral=True
+        )
+
+        def check(m):
+            return m.author.id == self.user_id and m.channel == interaction.channel
+
         msg = await bot.wait_for("message", check=check)
-        d = load_cupons()
+        cupons = load_cupons()
         code = msg.content.upper()
-        if code in d:
-            self.discount = d[code]
-            await self.refresh(i)
-            await i.followup.send("✅ Cupom aplicado!", ephemeral=True)
+
+        if code in cupons:
+            self.discount = cupons[code]
+            await interaction.followup.send("✅ Cupom aplicado!", ephemeral=True)
+            await interaction.message.edit(embed=self.make_embed(), view=self)
         else:
-            await i.followup.send("❌ Cupom inválido", ephemeral=True)
+            await interaction.followup.send("❌ Cupom inválido", ephemeral=True)
 
-@ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
-async def pay(self, i, _):
-    prod, _ = self.get()
+    @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
+    async def pagar(self, interaction: discord.Interaction, _):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
+            return
 
-    e = discord.Embed(
-        title="💳 PAGAMENTO VIA PIX",
-        description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
-        color=RED
-    )
+        prod, _ = self.get()
 
-    e.add_field(name="Chave", value=f"`{prod['pix']}`", inline=False)
-    e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
+        e = discord.Embed(
+            title="💳 PAGAMENTO VIA PIX",
+            description="Escaneie o QR ou copie a chave.\nEnvie o comprovante aqui.",
+            color=RED
+        )
 
-    if PIX_QR_URL.startswith("http"):
-        e.set_image(url=PIX_QR_URL)
+        e.add_field(name="Chave PIX", value=f"`{prod['pix']}`", inline=False)
+        e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
 
-    await i.response.send_message(embed=e)
+        if PIX_QR_URL and PIX_QR_URL.startswith("http"):
+            e.set_image(url=PIX_QR_URL)
+
+        await interaction.response.send_message(embed=e)
+
 
 
 # ========= CRIAR PRODUTO =========
@@ -262,6 +285,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
