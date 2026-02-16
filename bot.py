@@ -224,6 +224,41 @@ class CartView(ui.View):
 
         await i.response.send_message(embed=e)
 
+# ============ clear ============
+
+@bot.command()
+async def clear(ctx, n: int = None):
+    if not is_staff(ctx.author):
+        return
+
+    if n is None:
+        await ctx.channel.purge()
+        await ctx.send("🧹 Chat limpo!", delete_after=3)
+    else:
+        await ctx.channel.purge(limit=n+1)
+        await ctx.send(f"🧹 {n} mensagens apagadas!", delete_after=3)
+
+# ================ Entregar =================
+
+
+@bot.command()
+async def finalizar(ctx):
+    if not is_staff(ctx.author):
+        return
+
+    embed = discord.Embed(
+        title="📦 PEDIDO ENTREGUE",
+        description="Seu pedido foi entregue com sucesso!\nObrigado por comprar na **Next Community** 💚",
+        color=0x00ff99
+    )
+
+    await ctx.send(embed=embed)
+    await asyncio.sleep(60)
+
+    try:
+        await ctx.channel.delete()
+    except:
+        pass
 
 
 # ============== Reprovar ================
@@ -250,16 +285,18 @@ async def reprovar(ctx, *, motivo):
     embed.set_footer(text="Status: Pagamento Reprovado")
     await msg.edit(embed=embed)
 
-    user = await bot.fetch_user(order["user_id"])
-    await user.send(embed=discord.Embed(
-        title="❌ PAGAMENTO REPROVADO",
-        description=f"> {motivo}",
-        color=0xe74c3c
-    ))
+embed_thread = discord.Embed(
+    title="❌ PAGAMENTO REPROVADO",
+    color=0xe74c3c
+)
+embed_thread.add_field(name="Motivo:", value=motivo, inline=False)
 
-    await ctx.send("❌ Pedido reprovado.")
+await ctx.send(embed=embed_thread)
+
 
 # ============= Aprovar ==============
+
+
 
 @bot.command()
 async def aprovar(ctx):
@@ -282,14 +319,14 @@ async def aprovar(ctx):
     embed.set_footer(text="Status: Pagamento Aprovado")
     await msg.edit(embed=embed)
 
-    user = await bot.fetch_user(order["user_id"])
-    await user.send(embed=discord.Embed(
-        title="✅ PAGAMENTO APROVADO",
-        description="Seu pagamento foi aprovado! Aguarde a entrega.",
-        color=0x2ecc71
-    ))
+embed_thread = discord.Embed(
+    title="✅ PAGAMENTO APROVADO",
+    description="Pagamento confirmado.\nAguarde a entrega.",
+    color=0x2ecc71
+)
+await ctx.send(embed=embed_thread)
 
-    await ctx.send("✅ Pedido aprovado com sucesso!")
+
 
 # ========= CRIAR PRODUTO =========
 @bot.command()
@@ -364,6 +401,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
