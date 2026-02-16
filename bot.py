@@ -29,6 +29,32 @@ LOGS_REPROVAR = 1473012851282149568
 
 RED = 0xff0000
 
+
+# ======= não remova isso do topo BOT
+
+
+
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix="!", intents=intents)
+@bot.event
+async def on_member_join(member):
+    e = discord.Embed(title="🟢 Novo membro", color=0x2ecc71)
+    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
+    e.add_field(name="Conta criada", value=discord.utils.format_dt(member.created_at, "R"))
+    e.set_thumbnail(url=member.display_avatar.url)
+
+    await send_log(LOGS_ENTER, e)
+
+
+@bot.event
+async def on_member_remove(member):
+    e = discord.Embed(title="🔴 Membro saiu", color=0xe74c3c)
+    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
+
+    await send_log(LOGS_SAIDA, e)
+
+
+
 # ========= negocios randoms funcoes ========
 
 
@@ -183,25 +209,7 @@ async def update_status():
 
 
 
-# ========= BOT =========
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents)
-@bot.event
-async def on_member_join(member):
-    e = discord.Embed(title="🟢 Novo membro", color=0x2ecc71)
-    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
-    e.add_field(name="Conta criada", value=discord.utils.format_dt(member.created_at, "R"))
-    e.set_thumbnail(url=member.display_avatar.url)
 
-    await send_log(LOGS_ENTER, e)
-
-
-@bot.event
-async def on_member_remove(member):
-    e = discord.Embed(title="🔴 Membro saiu", color=0xe74c3c)
-    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
-
-    await send_log(LOGS_SAIDA, e)
 
 
 # ========= STATUS =========
@@ -781,6 +789,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
