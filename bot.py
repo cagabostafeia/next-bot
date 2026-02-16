@@ -51,6 +51,23 @@ async def dm_user(user_id, embed):
 # ========= BOT =========
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
+@bot.event
+async def on_member_join(member):
+    e = discord.Embed(title="🟢 Novo membro", color=0x2ecc71)
+    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
+    e.add_field(name="Conta criada", value=discord.utils.format_dt(member.created_at, "R"))
+    e.set_thumbnail(url=member.display_avatar.url)
+
+    await send_log(LOGS_ENTER, e)
+
+
+@bot.event
+async def on_member_remove(member):
+    e = discord.Embed(title="🔴 Membro saiu", color=0xe74c3c)
+    e.add_field(name="Usuário", value=f"{member} ({member.id})", inline=False)
+
+    await send_log(LOGS_SAIDA, e)
+
 
 # ========= STATUS =========
 @tasks.loop(seconds=15)
@@ -251,6 +268,23 @@ class CartView(ui.View):
     @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
     async def pay(self, i, _):
         prod, _ = self.get()
+        if data[self.pid]["plans"][self.plan_id]["stock"] < self.qtd:
+            return await i.response.send_message("❌ Estoque insuficiente.", ephemeral=True)
+
+        # diminuir estoque
+        data = load_products()
+        data[self.pid]["plans"][self.plan_id]["stock"] -= self.qtd
+        save_products(data)
+
+        # se zerar, logar
+        if data[self.pid]["plans"][self.plan_id]["stock"] <= 0:
+            log = discord.Embed(title="📦 ESTOQUE ESGOTADO", color=0xe67e22)
+            log.add_field(name="Produto", value=data[self.pid]["name"])
+            log.add_field(name="Plano", value=data[self.pid]["plans"][self.plan_id]["name"])
+            log.add_field(name="Thread", value=i.channel.mention)
+
+            await send_log(LOGS_ESTOQUE, log)
+
 
         orders = load_orders()
         orders[str(i.channel.id)] = {
@@ -560,6 +594,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
