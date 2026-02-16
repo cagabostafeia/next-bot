@@ -17,6 +17,21 @@ ORDERS_FILE = "pedidos.json"
 
 RED = 0xff0000
 
+
+
+#===== DMSSSSS ==========
+
+
+async def dm_user(user_id, embed):
+    try:
+        user = await bot.fetch_user(user_id)
+        await user.send(embed=embed)
+    except:
+        pass
+
+
+
+
 # ========= BOT =========
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -246,6 +261,10 @@ async def finalizar(ctx):
     if not is_staff(ctx.author):
         return
 
+    orders = load_orders()
+    channel_id = ctx.channel.id
+    order = next((v for v in orders.values() if v["channel_id"] == channel_id), None)
+
     embed = discord.Embed(
         title="📦 PEDIDO ENTREGUE",
         description="Seu pedido foi entregue com sucesso!\nObrigado por comprar na **Next Community** 💚",
@@ -253,12 +272,21 @@ async def finalizar(ctx):
     )
 
     await ctx.send(embed=embed)
-    await asyncio.sleep(60)
 
+    if order:
+        dm = discord.Embed(
+            title="📦 Pedido finalizado",
+            description="Seu pedido foi entregue!\nObrigado por comprar conosco 💚",
+            color=0x00ff99
+        )
+        await dm_user(order["user_id"], dm)
+
+    await asyncio.sleep(60)
     try:
         await ctx.channel.delete()
     except:
         pass
+
 
 
 # ============== Reprovar ================
@@ -294,6 +322,15 @@ async def reprovar(ctx, *, motivo):
 
     await ctx.send(embed=embed_thread)
 
+    # ====== DM ======
+    dm = discord.Embed(
+        title="❌ Pedido reprovado",
+        description=f"Seu pagamento foi reprovado.\n\n**Motivo:** {motivo}",
+        color=0xe74c3c
+    )
+    await dm_user(order["user_id"], dm)
+
+
 
 
 # ============= Aprovar ==============
@@ -327,10 +364,16 @@ async def aprovar(ctx):
         description="Pagamento confirmado.\nAguarde a entrega.",
         color=0x2ecc71
     )
-
     await ctx.send(embed=embed_thread)
 
-
+    # ====== DM ======
+    
+    dm = discord.Embed(
+        title="✅ Pedido aprovado",
+        description="Seu pagamento foi aprovado!\nA entrega será realizada no mesmo canal.\n\n**Aguarde.**",
+        color=0x2ecc71
+    )
+    await dm_user(order["user_id"], dm)
 
 
 # ========= CRIAR PRODUTO =========
@@ -406,6 +449,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
