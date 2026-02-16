@@ -276,11 +276,19 @@ async def finalizar(ctx):
     if order:
         dm = discord.Embed(
             title="📦 Pedido finalizado",
-            description="Seu pedido foi entregue!\nObrigado por comprar conosco 💚",
+            description="Seu pedido foi entregue com sucesso!\nObrigado pela preferência 💚",
             color=0x00ff99
         )
         await dm_user(order["user_id"], dm)
 
+    # apagar msg do staff
+    await asyncio.sleep(4)
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    # fechar thread em 60s
     await asyncio.sleep(60)
     try:
         await ctx.channel.delete()
@@ -289,11 +297,12 @@ async def finalizar(ctx):
 
 
 
+
 # ============== Reprovar ================
 
 
 @bot.command()
-async def reprovar(ctx, *, motivo):
+async def aprovar(ctx):
     if not is_staff(ctx.author):
         return
 
@@ -304,31 +313,39 @@ async def reprovar(ctx, *, motivo):
     if not order:
         return await ctx.send("❌ Nenhum pedido encontrado nesta thread.")
 
-    order["status"] = "Pagamento Reprovado"
+    order["status"] = "Pagamento Aprovado"
     save_orders(orders)
 
     channel = bot.get_channel(order["channel_id"])
     msg = await channel.fetch_message(order["message_id"])
 
     embed = msg.embeds[0]
-    embed.set_footer(text="Status: Pagamento Reprovado")
+    embed.set_footer(text="Status: Pagamento Aprovado")
     await msg.edit(embed=embed)
 
     embed_thread = discord.Embed(
-        title="❌ PAGAMENTO REPROVADO",
-        color=0xe74c3c
+        title="✅ PAGAMENTO APROVADO",
+        description="Pagamento confirmado.\nAguarde a entrega.",
+        color=0x2ecc71
     )
-    embed_thread.add_field(name="Motivo:", value=motivo, inline=False)
-
     await ctx.send(embed=embed_thread)
 
-    # ====== DM ======
+    # DM
     dm = discord.Embed(
-        title="❌ Pedido reprovado",
-        description=f"Seu pagamento foi reprovado.\n\n**Motivo:** {motivo}",
-        color=0xe74c3c
+        title="✅ Pedido aprovado",
+        description="Seu pagamento foi aprovado!\nA entrega será feita no mesmo canal.",
+        color=0x2ecc71
     )
     await dm_user(order["user_id"], dm)
+
+    # apagar msg do staff
+    await asyncio.sleep(4)
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+
 
 
 
@@ -449,6 +466,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
