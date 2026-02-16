@@ -13,6 +13,7 @@ STAFF_IDS = (NEXT_HELPER, OWNER)
 PIX_QR_URL = "https://cdn.discordapp.com/attachments/1469446920136167616/1472850758436262092/pix.png"
 PRODUCTS_FILE = "produtos.json"
 COUPONS_FILE = "cupons.json"
+ORDERS_FILE = "pedidos.json"
 
 RED = 0xff0000
 
@@ -56,6 +57,13 @@ def load_json(path):
 def save_json(path, data):
     with open(path, "w") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
+
+def load_orders():
+    return load_json(ORDERS_FILE)
+
+def save_orders(d):
+    save_json(ORDERS_FILE, d)
+
 
 # ========= CUPONS =========
 def load_cupons(): return load_json(COUPONS_FILE)
@@ -137,7 +145,8 @@ class CartView(ui.View):
         if self.discount:
             e.add_field(name="Cupom", value=f"{self.discount}%")
         e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
-        e.set_footer(text="Status: aguardando pagamento")
+        status = load_orders().get(str(self.user_id), {}).get("status", "Aguardando Pagamento")
+        e.set_footer(text=f"Status: {status}")
         return e
 
     async def refresh(self, interaction):
@@ -189,12 +198,17 @@ class CartView(ui.View):
             await interaction.followup.send("❌ Cupom inválido", ephemeral=True)
 
     @ui.button(label="💳 Pagar", style=discord.ButtonStyle.success)
-    async def pagar(self, interaction: discord.Interaction, _):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Não é seu carrinho", ephemeral=True)
-            return
-
+    async def pay(self, i, _):
         prod, _ = self.get()
+
+        orders = load_orders()
+        orders[str(self.user_id)] = {
+            "user_id": self.user_id,
+            "channel_id": i.channel.id,
+            "message_id": i.message.id,
+            "status": "Aguardando Pagamento"
+        }
+        save_orders(orders)
 
         e = discord.Embed(
             title="💳 PAGAMENTO VIA PIX",
@@ -205,12 +219,77 @@ class CartView(ui.View):
         e.add_field(name="Chave PIX", value=f"`{prod['pix']}`", inline=False)
         e.add_field(name="Total", value=f"R$ {self.total()}", inline=False)
 
-        if PIX_QR_URL and PIX_QR_URL.startswith("http"):
+        if PIX_QR_URL.startswith("http"):
             e.set_image(url=PIX_QR_URL)
 
-        await interaction.response.send_message(embed=e)
+        await i.response.send_message(embed=e)
 
 
+
+# ============== Reprovar ================
+
+
+@bot.command()
+async def reprovar(ctx, *, motivo):
+    if not is_staff(ctx.author): return
+
+    orders = load_orders()
+    channel_id = ctx.channel.id
+
+    order = next((v for v in orders.values() if v["channel_id"] == channel_id), None)
+    if not order:
+        return await ctx.send("❌ Nenhum pedido encontrado nesta thread.")
+
+    order["status"] = "Pagamento Reprovado"
+    save_orders(orders)
+
+    channel = bot.get_channel(order["channel_id"])
+    msg = await channel.fetch_message(order["message_id"])
+
+    embed = msg.embeds[0]
+    embed.set_footer(text="Status: Pagamento Reprovado")
+    await msg.edit(embed=embed)
+
+    user = await bot.fetch_user(order["user_id"])
+    await user.send(embed=discord.Embed(
+        title="❌ PAGAMENTO REPROVADO",
+        description=f"> {motivo}",
+        color=0xe74c3c
+    ))
+
+    await ctx.send("❌ Pedido reprovado.")
+
+# ============= Aprovar ==============
+
+@bot.command()
+async def aprovar(ctx):
+    if not is_staff(ctx.author): return
+
+    orders = load_orders()
+    channel_id = ctx.channel.id
+
+    order = next((v for v in orders.values() if v["channel_id"] == channel_id), None)
+    if not order:
+        return await ctx.send("❌ Nenhum pedido encontrado nesta thread.")
+
+    order["status"] = "Pagamento Aprovado"
+    save_orders(orders)
+
+    channel = bot.get_channel(order["channel_id"])
+    msg = await channel.fetch_message(order["message_id"])
+
+    embed = msg.embeds[0]
+    embed.set_footer(text="Status: Pagamento Aprovado")
+    await msg.edit(embed=embed)
+
+    user = await bot.fetch_user(order["user_id"])
+    await user.send(embed=discord.Embed(
+        title="✅ PAGAMENTO APROVADO",
+        description="Seu pagamento foi aprovado! Aguarde a entrega.",
+        color=0x2ecc71
+    ))
+
+    await ctx.send("✅ Pedido aprovado com sucesso!")
 
 # ========= CRIAR PRODUTO =========
 @bot.command()
@@ -285,6 +364,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
