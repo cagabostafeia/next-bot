@@ -207,6 +207,118 @@ async def update_status():
 
 
 
+# ==== pacote supremo adm
+
+
+@bot.command()
+async def warn(ctx, member: discord.Member, *, motivo="Não informado"):
+    if not is_staff(ctx.author): return
+    e = discord.Embed(title="⚠️ Aviso", color=0xf1c40f)
+    e.add_field(name="Usuário", value=member.mention)
+    e.add_field(name="Motivo", value=motivo)
+    await member.send(embed=e)
+    await ctx.send(embed=e)
+
+
+@bot.command()
+async def mute(ctx, member: discord.Member, tempo: int, *, motivo="Não informado"):
+    if not is_staff(ctx.author): return
+    role = discord.utils.get(ctx.guild.roles, name="Muted")
+    if not role:
+        role = await ctx.guild.create_role(name="Muted")
+        for ch in ctx.guild.channels:
+            await ch.set_permissions(role, send_messages=False, speak=False)
+
+    await member.add_roles(role)
+    await ctx.send(f"🔇 {member} mutado por {tempo}s")
+
+    await asyncio.sleep(tempo)
+    await member.remove_roles(role)
+
+
+
+@bot.command()
+async def banid(ctx, user_id: int, *, motivo="Não informado"):
+    if not is_staff(ctx.author): return
+    user = await bot.fetch_user(user_id)
+    await ctx.guild.ban(user, reason=motivo)
+    await ctx.send("🔨 Banido por ID.")
+
+
+
+@bot.command()
+async def purge(ctx, n: int):
+    if not is_staff(ctx.author): return
+    await ctx.channel.purge(limit=n+1)
+    await ctx.send(f"🧹 {n} mensagens apagadas", delete_after=3)
+
+
+@bot.command()
+async def anunciar(ctx, *, msg):
+    if not is_staff(ctx.author): return
+    e = discord.Embed(title="📢 Anúncio", description=msg, color=0x3498db)
+    await ctx.send(embed=e)
+
+
+
+@bot.command()
+async def setstock(ctx, pid, plan, qtd: int):
+    if not is_staff(ctx.author): return
+    data = load_products()
+    data[pid]["plans"][plan]["stock"] = qtd
+    save_products(data)
+    await ctx.send("📦 Estoque atualizado")
+
+
+@bot.command()
+async def setprice(ctx, pid, plan, valor: int):
+    if not is_staff(ctx.author): return
+    data = load_products()
+    data[pid]["plans"][plan]["price"] = valor
+    save_products(data)
+    await ctx.send("💰 Preço atualizado")
+
+
+@bot.command()
+async def reset_orders(ctx):
+    if not is_staff(ctx.author): return
+    save_orders({})
+    await ctx.send("♻️ Todos os pedidos resetados")
+
+
+@bot.command()
+async def mover(ctx, member: discord.Member, canal: discord.VoiceChannel):
+    if not is_staff(ctx.author): return
+    await member.move_to(canal)
+
+
+@bot.command()
+async def nickname(ctx, member: discord.Member, *, nome):
+    if not is_staff(ctx.author): return
+    await member.edit(nick=nome)
+    await ctx.send("✏️ Nick alterado")
+
+@bot.command()
+async def reload(ctx):
+    if not is_staff(ctx.author): return
+    await ctx.send("♻️ Recarregando configs...")
+    os._exit(0)
+
+
+@bot.command()
+async def whois(ctx, member: discord.Member):
+    e = discord.Embed(title=f"🔍 {member}", color=0x95a5a6)
+    e.add_field(name="ID", value=member.id)
+    e.add_field(name="Criado", value=discord.utils.format_dt(member.created_at))
+    e.add_field(name="Entrou", value=discord.utils.format_dt(member.joined_at))
+    await ctx.send(embed=e)
+
+
+@bot.command()
+async def shutdown(ctx):
+    if ctx.author.id != OWNER: return
+    await ctx.send("💀 Bot desligando...")
+    await bot.close()
 
 
 
@@ -789,6 +901,7 @@ async def loja_criar(ctx):
 
 
 bot.run(TOKEN)
+
 
 
 
